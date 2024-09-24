@@ -11,3 +11,9 @@ class Process:
         self.waiting_time = 0         # Waiting Time
         self.turnaround_time = 0      # Turnaround Time
         self.response_time = None      # Response Time
+
+def fifo_scheduling(processes):
+
+def sjf_scheduling(processes):
+
+def round_robin_scheduling(processes, q):
