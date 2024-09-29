@@ -3,6 +3,7 @@
 
 
 import heapq
+import sys  # For command-line arguments
 
 class Process:
     def __init__(self, process_id, arrival_time, burst_time):
@@ -16,28 +17,28 @@ class Process:
         self.turnaround_time = 0    # Turnaround Time
         self.response_time = None   # Response Time
 
-
-    # If wanting better runtime for sjf
-    # def __lt__(self, other):
-    #     # This is needed for the heap to compare processes based on their remaining time
-    #     return self.remaining_time < other.remaining_time
-
 def parse_input_file(file_path):
     processes = []
+    quantum = None  # Initialize quantum to None
+
     with open(file_path, 'r') as file:
         lines = file.readlines()
         process_count = int(lines[0].split()[1])
         run_for = int(lines[1].split()[1])
         algorithm = lines[2].split()[1]
         
-        for i in range(3, 3 + process_count):
+        # If the algorithm is round robin, we expect a quantum value
+        if algorithm == "rr":
+            quantum = int(lines[3].split()[1])
+
+        for i in range(4, 4 + process_count):  # Adjusting to start after the quantum line
             parts = lines[i].split()
             process_id = parts[2]
             arrival_time = int(parts[4])
             burst_time = int(parts[6])
             processes.append(Process(process_id, arrival_time, burst_time))
 
-    return processes, run_for, algorithm
+    return processes, run_for, algorithm, quantum
 
 def calculate_metrics(processes):
     for process in processes:
@@ -205,7 +206,13 @@ def generate_output(log, processes):
         print(f"{process.process_id} wait {process.waiting_time} turnaround {process.turnaround_time} response {process.start_time - process.arrival_time}")
 
 if __name__ == "__main__":
-    processes, run_for, algorithm = parse_input_file("input.txt")
+    if len(sys.argv) != 2:
+        print("Usage: scheduler-gpt.py inputFile.in")
+        sys.exit(1)
+
+    input_file = sys.argv[1]
+
+    processes, run_for, algorithm, quantum = parse_input_file(input_file)
 
     print(f"{len(processes)} processes")
     
@@ -216,7 +223,9 @@ if __name__ == "__main__":
         print(f"Using First-Come First-Serve")
         log, processes = fifo_scheduling(processes, run_for)
     elif algorithm == "rr":
-        quantum = int(input("Enter quantum: "))  # Example of how to pass quantum
+        if quantum is None:
+            print("Error: Quantum not specified for Round Robin algorithm.")
+            sys.exit(1)
         print(f"Using Round Robin with quantum {quantum}")
         log, processes = round_robin_scheduling(processes, run_for, quantum)
     
