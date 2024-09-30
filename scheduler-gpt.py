@@ -3,6 +3,7 @@
 
 
 import sys  # For command-line arguments
+import os  # To handle file name manipulations
 
 class Process:
     def __init__(self, process_id, arrival_time, burst_time):
@@ -86,6 +87,7 @@ def sjf_preemptive_scheduling(processes, run_for):
     completed = 0
     ready_queue = []
     log = []
+    last_selected_process = None  # Keep track of the last selected process
 
     while completed != len(processes) or time < run_for:
         # Check process arrivals
@@ -102,11 +104,16 @@ def sjf_preemptive_scheduling(processes, run_for):
         if ready_queue:
             current_process = min(ready_queue, key=lambda x: x.remaining_time)
             
+            # Log the selection only if the current process is different from the last selected process
+            if current_process != last_selected_process:
+                log.append(f"Time {time} : {current_process.process_id} selected (burst {current_process.burst_time})")
+                last_selected_process = current_process  # Update the last selected process
+            
+            # If this is the first time the process is being executed, set the start time.
             if current_process.start_time is None:
                 current_process.start_time = time
-                log.append(f"Time {time} : {current_process.process_id} selected (burst {current_process.burst_time})")
-            
-            # Execute the process
+
+            # Execute the process for one time unit
             time += 1
             current_process.remaining_time -= 1
 
@@ -119,6 +126,7 @@ def sjf_preemptive_scheduling(processes, run_for):
                 ready_queue.remove(current_process)
                 completed += 1
         else:
+            # If no process is ready to run, the CPU is idle.
             log.append(f"Time {time} : Idle")
             time += 1  # If no process is ready, increment the time
 
@@ -126,6 +134,9 @@ def sjf_preemptive_scheduling(processes, run_for):
     return log, processes
 
 def round_robin_scheduling(processes, run_for, quantum):
+    # Sort the processes by their arrival time before starting the simulation
+    processes.sort(key=lambda x: x.arrival_time)
+
     time = 0
     ready_queue = []
     log = []
@@ -164,13 +175,24 @@ def round_robin_scheduling(processes, run_for, quantum):
     log.append(f"Finished at time {time}")
     return log, processes
 
-def generate_output(log, processes):
-    for line in log:
-        print(line)
+def generate_output(log, processes, input_file):
+    # Create the output file name by replacing .in with .out
+    output_file = os.path.splitext(input_file)[0] + ".out"
 
-    print()  # Empty line before summary
-    for process in processes:
-        print(f"{process.process_id} wait {process.waiting_time} turnaround {process.turnaround_time} response {process.start_time - process.arrival_time}")
+    with open(output_file, 'w') as f:
+        # Write the log entries
+        for line in log:
+            f.write(line + '\n')
+
+        f.write('\n')  # Empty line before summary
+
+        # Write process metrics
+        for process in processes:
+            f.write(f"{process.process_id} wait {process.waiting_time} "
+                    f"turnaround {process.turnaround_time} "
+                    f"response {process.start_time - process.arrival_time}\n")
+    
+    print(f"Output written to {output_file}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -201,4 +223,4 @@ if __name__ == "__main__":
     if log == None:
         print(f"Error: Algorithm not specified/valid.")
     else:
-        generate_output(log, processes)
+        generate_output(log, processes, input_file)
