@@ -16,6 +16,7 @@ class Process:
         self.waiting_time = 0   # Waiting Time
         self.turnaround_time = 0    # Turnaround Time
         self.response_time = None   # Response Time
+        self.arrived = False  # To track whether the arrival has already been logged
 
 def parse_input_file(file_path):
     processes = []
@@ -56,31 +57,58 @@ def calculate_metrics(processes):
     return processes
 
 def fcfs_scheduling(processes, run_for):
-    time = 0
+    current_time = 0
+    process_queue = sorted(processes, key=lambda x: x.arrival_time)  # Sort by arrival time
     log = []
-    processes_sorted = sorted(processes, key=lambda x: x.arrival_time)
-    
-    for process in processes_sorted:
-        if time < process.arrival_time:
-            while time < process.arrival_time:
-                log.append(f"Time {time} : Idle")
-                time += 1
-                
-        log.append(f"Time {time} : {process.process_id} arrived")
-        process.start_time = time
-        log.append(f"Time {time} : {process.process_id} selected (burst {process.burst_time})")
-        time += process.burst_time
-        process.completion_time = time
-        process.turnaround_time = time - process.arrival_time
-        process.waiting_time = process.turnaround_time - process.burst_time
-        log.append(f"Time {time} : {process.process_id} finished")
-    
-    while time < run_for:
-        log.append(f"Time {time} : Idle")
-        time += 1
 
-    log.append(f"Finished at time {time}")
-    return log, processes
+    completed_processes = []  # Track completed processes
+
+    # Initialize remaining time for each process
+    for process in process_queue:
+        process.remaining_time = process.burst_time  # Add this line to initialize remaining time
+
+    while current_time < run_for:
+        # Log process arrivals at the current time
+        for process in process_queue:
+            if process.arrival_time == current_time and not process.arrived:
+                log.append(f"Time {current_time:>3} : {process.process_id} arrived")
+                process.arrived = True  # Mark this process as arrived to prevent duplicate logging
+        
+        # Find the next process that has arrived and is ready to run
+        arrived_processes = [process for process in process_queue if process.arrival_time <= current_time and process not in completed_processes]
+        
+        if arrived_processes:
+            # Select the first process (FCFS)
+            current_process = arrived_processes[0]
+            if current_process.start_time is None:  # Set response time if not set
+                current_process.start_time = current_time
+            
+            log.append(f"Time {current_time:>3} : {current_process.process_id} selected (burst {current_process.remaining_time:>3})")
+            
+            # Simulate process execution
+            while current_process.remaining_time > 0 and current_time < run_for:
+                current_process.remaining_time -= 1
+                current_time += 1
+                
+                # Log any new arrivals during the execution of this process
+                for process in process_queue:
+                    if process.arrival_time == current_time and not process.arrived:
+                        log.append(f"Time {current_time:>3} : {process.process_id} arrived")
+                        process.arrived = True
+            
+            completed_processes.append(current_process)
+            current_process.completion_time = current_time
+            current_process.turnaround_time = current_time - current_process.arrival_time
+            current_process.waiting_time = current_process.turnaround_time - current_process.burst_time  # Calculate waiting time based on original burst time
+            log.append(f"Time {current_time:>3} : {current_process.process_id} finished")
+            
+        else:
+            log.append(f"Time {current_time:>3} : Idle")
+            current_time += 1
+    
+    log.append(f"Finished at time {current_time:>3}")
+    
+    return log, completed_processes
 
 def sjf_preemptive_scheduling(processes, run_for):
     time = 0
@@ -175,6 +203,10 @@ def round_robin_scheduling(processes, run_for, quantum):
     log.append(f"Finished at time {time}")
     return log, processes
 
+import os
+
+import os
+
 def generate_output(log, processes, input_file):
     # Create the output file name by replacing .in with .out
     output_file = os.path.splitext(input_file)[0] + ".out"
@@ -186,8 +218,11 @@ def generate_output(log, processes, input_file):
 
         f.write('\n')  # Empty line before summary
 
+        # Sort processes by process_id (name)
+        processes_sorted = sorted(processes, key=lambda p: p.process_id)
+
         # Write process metrics
-        for process in processes:
+        for process in processes_sorted:
             f.write(f"{process.process_id} wait {process.waiting_time:>3} "
                     f"turnaround {process.turnaround_time:>3} "
                     f"response {process.start_time - process.arrival_time:>3}\n")
@@ -215,7 +250,7 @@ if __name__ == "__main__":
         log.extend(scheduling_log)  # Append the scheduling log
 
     elif algorithm == "fcfs":
-        log.append("Using First-Come First-Serve")
+        log.append("Using First-Come First-Served")
         scheduling_log, processes = fcfs_scheduling(processes, run_for)
         log.extend(scheduling_log)  # Append the scheduling log
 
