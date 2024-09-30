@@ -19,7 +19,6 @@ class Process:
         self.arrived = False                   # To track whether the arrival has already been logged
         self.finished = False                  # To track if the process has finished
 
-
 def parse_input_file(file_path):
     processes = []
     quantum = None  # Initialize quantum to None
@@ -49,14 +48,6 @@ def parse_input_file(file_path):
                 processes.append(Process(process_id, arrival_time, burst_time))
 
     return processes, run_for, algorithm, quantum
-
-def calculate_metrics(processes):
-    for process in processes:
-        process.turnaround_time = process.completion_time - process.arrival_time
-        process.waiting_time = process.turnaround_time - process.burst_time
-        process.response_time = process.start_time - process.arrival_time
-
-    return processes
 
 def fcfs_scheduling(processes, run_for):
     current_time = 0
@@ -218,6 +209,11 @@ def round_robin_scheduling(processes, run_for, quantum):
             time += 1  # CPU is idle, increment time
 
     log.append(f"Finished at time {time}")
+
+    # Allows all process to be seen as finished (Temp)
+    for process in processes:
+        process.finished = True  # Mark process as finished
+
     return log, processes
 
 def generate_output(log, processes, input_file):
