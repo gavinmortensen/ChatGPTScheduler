@@ -177,35 +177,54 @@ def round_robin_scheduling(processes, run_for, quantum):
     ready_queue = []
     log = []
     index = 0
-    while index < len(processes) or ready_queue:
+    
+    # Track the last selected process to prevent redundant logging
+    current_process = None
+
+    while index < len(processes) or ready_queue or current_process:
         # Add arrived processes to ready_queue
         while index < len(processes) and processes[index].arrival_time <= time:
-            log.append(f"Time {time} : {processes[index].process_id} arrived")
+            log.append(f"Time {time:>3} : {processes[index].process_id} arrived")
             ready_queue.append(processes[index])
             index += 1
+        
+        # If a process is running, add it back to the ready queue if it has remaining burst time
+        if current_process and current_process.remaining_time > 0:
+            ready_queue.append(current_process)
         
         if ready_queue:
             current_process = ready_queue.pop(0)
             
             if current_process.start_time is None:
                 current_process.start_time = time
-                log.append(f"Time {time} : {current_process.process_id} selected (burst {current_process.burst_time})")
+                log.append(f"Time {time:>3} : {current_process.process_id} selected (burst {current_process.remaining_time:>3})")
             
+            # Execute the process for one quantum or the remaining burst time, whichever is smaller
             execute_time = min(quantum, current_process.remaining_time)
-            time += execute_time
-            current_process.remaining_time -= execute_time
             
-            if current_process.remaining_time == 0:
-                current_process.completion_time = time
-                current_process.turnaround_time = time - current_process.arrival_time
-                current_process.waiting_time = current_process.turnaround_time - current_process.burst_time
-                log.append(f"Time {time} : {current_process.process_id} finished")
+            # Simulate the process execution for the time slice
+            for t in range(execute_time):
+                time += 1
+                current_process.remaining_time -= 1
+                
+                # Log any new arrivals during the execution of this process
+                while index < len(processes) and processes[index].arrival_time == time:
+                    log.append(f"Time {time:>3} : {processes[index].process_id} arrived")
+                    ready_queue.append(processes[index])
+                    index += 1
+                
+                if current_process.remaining_time == 0:
+                    current_process.completion_time = time
+                    current_process.turnaround_time = time - current_process.arrival_time
+                    current_process.waiting_time = current_process.turnaround_time - current_process.burst_time
+                    log.append(f"Time {time:>3} : {current_process.process_id} finished")
+                    current_process = None
+                    break
             else:
-                # If the process isn't finished, put it back into the queue
-                ready_queue.append(current_process)
+                log.append(f"Time {time:>3} : {current_process.process_id} selected (burst {current_process.remaining_time:>3})")
         
         else:
-            log.append(f"Time {time} : Idle")
+            log.append(f"Time {time:>3} : Idle")
             time += 1  # CPU is idle, increment time
 
     log.append(f"Finished at time {time}")
