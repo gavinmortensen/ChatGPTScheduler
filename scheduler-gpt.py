@@ -200,5 +200,5 @@ if __name__ == "__main__":
     # Means algorithm not found
     if log == None:
         print(f"Error: Algorithm not specified/valid.")
-    
-    generate_output(log, processes)
+    else:
+        generate_output(log, processes)
