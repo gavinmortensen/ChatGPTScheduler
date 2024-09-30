@@ -120,8 +120,9 @@ def sjf_preemptive_scheduling(processes, run_for):
     while completed != len(processes) or time < run_for:
         # Check process arrivals
         for process in processes:
-            if process.arrival_time == time:
+            if process.arrival_time == time and not process.arrived:
                 log.append(f"Time {time:>3} : {process.process_id} arrived")
+                process.arrived = True  # Mark as arrived to prevent duplicate logging
 
         # Add all arrived processes to the ready queue
         for process in processes:
@@ -144,6 +145,12 @@ def sjf_preemptive_scheduling(processes, run_for):
             # Execute the process for one time unit
             time += 1
             current_process.remaining_time -= 1
+
+            # Check if any other processes arrive at the new time before logging the process completion
+            for process in processes:
+                if process.arrival_time == time and not process.arrived:
+                    log.append(f"Time {time:>3} : {process.process_id} arrived")
+                    process.arrived = True  # Mark as arrived to prevent duplicate logging
 
             # Check if the process finishes
             if current_process.remaining_time == 0:
@@ -202,10 +209,6 @@ def round_robin_scheduling(processes, run_for, quantum):
 
     log.append(f"Finished at time {time}")
     return log, processes
-
-import os
-
-import os
 
 def generate_output(log, processes, input_file):
     # Create the output file name by replacing .in with .out
