@@ -2,7 +2,6 @@
 # Gavin Mortensen
 
 
-import heapq
 import sys  # For command-line arguments
 
 class Process:
@@ -30,13 +29,20 @@ def parse_input_file(file_path):
         # If the algorithm is round robin, we expect a quantum value
         if algorithm == "rr":
             quantum = int(lines[3].split()[1])
+            for i in range(4, 4 + process_count):  # Adjusting to start after the quantum line
+                parts = lines[i].split()
+                process_id = parts[2]
+                arrival_time = int(parts[4])
+                burst_time = int(parts[6])
+                processes.append(Process(process_id, arrival_time, burst_time))
 
-        for i in range(4, 4 + process_count):  # Adjusting to start after the quantum line
-            parts = lines[i].split()
-            process_id = parts[2]
-            arrival_time = int(parts[4])
-            burst_time = int(parts[6])
-            processes.append(Process(process_id, arrival_time, burst_time))
+        else:
+            for i in range(3, 3 + process_count):  # Adjusting to start after the quantum line
+                parts = lines[i].split()
+                process_id = parts[2]
+                arrival_time = int(parts[4])
+                burst_time = int(parts[6])
+                processes.append(Process(process_id, arrival_time, burst_time))
 
     return processes, run_for, algorithm, quantum
 
@@ -48,7 +54,7 @@ def calculate_metrics(processes):
 
     return processes
 
-def fifo_scheduling(processes, run_for):
+def fcfs_scheduling(processes, run_for):
     time = 0
     log = []
     processes_sorted = sorted(processes, key=lambda x: x.arrival_time)
@@ -119,45 +125,6 @@ def sjf_preemptive_scheduling(processes, run_for):
     log.append(f"Finished at time {time}")
     return log, processes
 
-# If wanting better runtime for sjf
-    # time = 0
-    # completed = 0
-    # ready_queue = []
-    # process_index = 0
-    # n = len(processes)
-
-    # # Sort processes by arrival time first
-    # processes.sort(key=lambda x: x.arrival_time)
-
-    # while completed != n:
-    #     # Push all processes that have arrived by the current time into the heap
-    #     while process_index < n and processes[process_index].arrival_time <= time:
-    #         heapq.heappush(ready_queue, processes[process_index])
-    #         process_index += 1
-
-    #     if ready_queue:
-    #         # Get the process with the shortest remaining time
-    #         current_process = heapq.heappop(ready_queue)
-
-    #         if current_process.start_time is None:
-    #             current_process.start_time = time
-
-    #         # Execute the process for 1 time unit
-    #         time += 1
-    #         current_process.remaining_time -= 1
-
-    #         if current_process.remaining_time == 0:
-    #             current_process.completion_time = time
-    #             completed += 1
-    #         else:
-    #             # If the process is not finished, push it back into the heap
-    #             heapq.heappush(ready_queue, current_process)
-    #     else:
-    #         # If no process is ready to execute, advance time
-    #         time += 1
-
-    # return processes
-
 def round_robin_scheduling(processes, run_for, quantum):
     time = 0
     ready_queue = []
@@ -211,6 +178,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     input_file = sys.argv[1]
+    log = None
 
     processes, run_for, algorithm, quantum = parse_input_file(input_file)
 
@@ -219,14 +187,18 @@ if __name__ == "__main__":
     if algorithm == "sjf":
         print(f"Using preemptive Shortest Job First")
         log, processes = sjf_preemptive_scheduling(processes, run_for)
-    elif algorithm == "fifo":
+    elif algorithm == "fcfs":
         print(f"Using First-Come First-Serve")
-        log, processes = fifo_scheduling(processes, run_for)
+        log, processes = fcfs_scheduling(processes, run_for)
     elif algorithm == "rr":
         if quantum is None:
             print("Error: Quantum not specified for Round Robin algorithm.")
             sys.exit(1)
         print(f"Using Round Robin with quantum {quantum}")
         log, processes = round_robin_scheduling(processes, run_for, quantum)
+
+    # Means algorithm not found
+    if log == None:
+        print(f"Error: Algorithm not specified/valid.")
     
     generate_output(log, processes)
