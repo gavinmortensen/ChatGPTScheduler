@@ -223,7 +223,8 @@ if __name__ == "__main__":
         if quantum is None:
             print("Error: Quantum not specified for Round Robin algorithm.")
             sys.exit(1)
-        log.append(f"Using Round Robin with quantum {quantum}")
+        log.append(f"Using Round-Robin")
+        log.append(f"Quantum {quantum}\n")
         scheduling_log, processes = round_robin_scheduling(processes, run_for, quantum)
         log.extend(scheduling_log)  # Append the scheduling log
 
