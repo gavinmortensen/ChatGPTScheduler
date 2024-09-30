@@ -7,16 +7,18 @@ import os  # To handle file name manipulations
 
 class Process:
     def __init__(self, process_id, arrival_time, burst_time):
-        self.process_id = process_id    # Process ID
-        self.arrival_time = arrival_time    # Arrival Time
-        self.burst_time = burst_time    # Total Execution Time
-        self.remaining_time = burst_time    # Remaining Execution Time for SJF
-        self.start_time = None  # Start Time of the Process
-        self.finish_time = None # Finish Time of the Process
-        self.waiting_time = 0   # Waiting Time
-        self.turnaround_time = 0    # Turnaround Time
-        self.response_time = None   # Response Time
-        self.arrived = False  # To track whether the arrival has already been logged
+        self.process_id = process_id          # Process ID
+        self.arrival_time = arrival_time      # Arrival Time
+        self.burst_time = burst_time          # Total Execution Time
+        self.remaining_time = burst_time      # Remaining Execution Time for SJF
+        self.start_time = None                # Start Time of the Process
+        self.finish_time = None               # Finish Time of the Process
+        self.waiting_time = 0                 # Waiting Time
+        self.turnaround_time = 0              # Turnaround Time
+        self.response_time = None              # Response Time
+        self.arrived = False                   # To track whether the arrival has already been logged
+        self.finished = False                  # To track if the process has finished
+
 
 def parse_input_file(file_path):
     processes = []
@@ -65,7 +67,8 @@ def fcfs_scheduling(processes, run_for):
 
     # Initialize remaining time for each process
     for process in process_queue:
-        process.remaining_time = process.burst_time  # Add this line to initialize remaining time
+        process.remaining_time = process.burst_time  # Initialize remaining time
+        process.finished = False  # Initialize finished status
 
     while current_time < run_for:
         # Log process arrivals at the current time
@@ -96,11 +99,17 @@ def fcfs_scheduling(processes, run_for):
                         log.append(f"Time {current_time:>3} : {process.process_id} arrived")
                         process.arrived = True
             
-            completed_processes.append(current_process)
-            current_process.completion_time = current_time
-            current_process.turnaround_time = current_time - current_process.arrival_time
-            current_process.waiting_time = current_process.turnaround_time - current_process.burst_time  # Calculate waiting time based on original burst time
-            log.append(f"Time {current_time:>3} : {current_process.process_id} finished")
+            # Check if the process has finished execution
+            if current_process.remaining_time == 0:
+                completed_processes.append(current_process)
+                current_process.completion_time = current_time
+                current_process.turnaround_time = current_time - current_process.arrival_time
+                current_process.waiting_time = current_process.turnaround_time - current_process.burst_time  # Calculate waiting time based on original burst time
+                current_process.finished = True  # Mark process as finished
+                log.append(f"Time {current_time:>3} : {current_process.process_id} finished")
+            else:
+                # Do not log anything about unfinished processes
+                current_process.finished = False  # Mark process as unfinished
             
         else:
             log.append(f"Time {current_time:>3} : Idle")
@@ -108,7 +117,7 @@ def fcfs_scheduling(processes, run_for):
     
     log.append(f"Finished at time {current_time:>3}")
     
-    return log, completed_processes
+    return log, processes
 
 def sjf_preemptive_scheduling(processes, run_for):
     time = 0
@@ -117,7 +126,7 @@ def sjf_preemptive_scheduling(processes, run_for):
     log = []
     last_selected_process = None  # Keep track of the last selected process
 
-    while completed != len(processes) or time < run_for:
+    while time < run_for:
         # Check process arrivals
         for process in processes:
             if process.arrival_time == time and not process.arrived:
@@ -157,6 +166,7 @@ def sjf_preemptive_scheduling(processes, run_for):
                 current_process.completion_time = time
                 current_process.turnaround_time = time - current_process.arrival_time
                 current_process.waiting_time = current_process.turnaround_time - current_process.burst_time
+                current_process.finished = True  # Mark process as finished
                 log.append(f"Time {time:>3} : {current_process.process_id} finished")
                 ready_queue.remove(current_process)
                 completed += 1
@@ -221,14 +231,14 @@ def generate_output(log, processes, input_file):
 
         f.write('\n')  # Empty line before summary
 
-        # Sort processes by process_id (name)
-        processes_sorted = sorted(processes, key=lambda p: p.process_id)
-
         # Write process metrics
-        for process in processes_sorted:
-            f.write(f"{process.process_id} wait {process.waiting_time:>3} "
-                    f"turnaround {process.turnaround_time:>3} "
-                    f"response {process.start_time - process.arrival_time:>3}\n")
+        for process in processes:
+            if process.finished:
+                f.write(f"{process.process_id} wait {process.waiting_time:>3} "
+                        f"turnaround {process.turnaround_time:>3} "
+                        f"response {process.start_time - process.arrival_time:>3}\n")
+            else:
+                f.write(f"{process.process_id} did not finish\n")
     
     print(f"Output written to {output_file}")
 
