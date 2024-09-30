@@ -37,7 +37,7 @@ def parse_input_file(file_path):
                 processes.append(Process(process_id, arrival_time, burst_time))
 
         else:
-            for i in range(3, 3 + process_count):  # Adjusting to start after the quantum line
+            for i in range(3, 3 + process_count):  # No adjustments for the quantum line
                 parts = lines[i].split()
                 process_id = parts[2]
                 arrival_time = int(parts[4])
