@@ -93,7 +93,7 @@ def sjf_preemptive_scheduling(processes, run_for):
         # Check process arrivals
         for process in processes:
             if process.arrival_time == time:
-                log.append(f"Time {time} : {process.process_id} arrived")
+                log.append(f"Time {time:>3} : {process.process_id} arrived")
 
         # Add all arrived processes to the ready queue
         for process in processes:
@@ -106,7 +106,7 @@ def sjf_preemptive_scheduling(processes, run_for):
             
             # Log the selection only if the current process is different from the last selected process
             if current_process != last_selected_process:
-                log.append(f"Time {time} : {current_process.process_id} selected (burst {current_process.burst_time})")
+                log.append(f"Time {time:>3} : {current_process.process_id} selected (burst {current_process.remaining_time:>3})")
                 last_selected_process = current_process  # Update the last selected process
             
             # If this is the first time the process is being executed, set the start time.
@@ -122,15 +122,15 @@ def sjf_preemptive_scheduling(processes, run_for):
                 current_process.completion_time = time
                 current_process.turnaround_time = time - current_process.arrival_time
                 current_process.waiting_time = current_process.turnaround_time - current_process.burst_time
-                log.append(f"Time {time} : {current_process.process_id} finished")
+                log.append(f"Time {time:>3} : {current_process.process_id} finished")
                 ready_queue.remove(current_process)
                 completed += 1
         else:
             # If no process is ready to run, the CPU is idle.
-            log.append(f"Time {time} : Idle")
+            log.append(f"Time {time:>3} : Idle")
             time += 1  # If no process is ready, increment the time
 
-    log.append(f"Finished at time {time}")
+    log.append(f"Finished at time {time:>3}")
     return log, processes
 
 def round_robin_scheduling(processes, run_for, quantum):
@@ -188,9 +188,9 @@ def generate_output(log, processes, input_file):
 
         # Write process metrics
         for process in processes:
-            f.write(f"{process.process_id} wait {process.waiting_time} "
-                    f"turnaround {process.turnaround_time} "
-                    f"response {process.start_time - process.arrival_time}\n")
+            f.write(f"{process.process_id} wait {process.waiting_time:>3} "
+                    f"turnaround {process.turnaround_time:>3} "
+                    f"response {process.start_time - process.arrival_time:>3}\n")
     
     print(f"Output written to {output_file}")
 
@@ -200,27 +200,35 @@ if __name__ == "__main__":
         sys.exit(1)
 
     input_file = sys.argv[1]
-    log = None
+    log = []
 
+    # Parse the input file
     processes, run_for, algorithm, quantum = parse_input_file(input_file)
 
-    print(f"{len(processes)} processes")
-    
+    # Log the number of processes at the start
+    log.append(f"{len(processes):>3} processes")
+
+    # Determine which scheduling algorithm to use and log it
     if algorithm == "sjf":
-        print(f"Using preemptive Shortest Job First")
-        log, processes = sjf_preemptive_scheduling(processes, run_for)
+        log.append("Using preemptive Shortest Job First")
+        scheduling_log, processes = sjf_preemptive_scheduling(processes, run_for)
+        log.extend(scheduling_log)  # Append the scheduling log
+
     elif algorithm == "fcfs":
-        print(f"Using First-Come First-Serve")
-        log, processes = fcfs_scheduling(processes, run_for)
+        log.append("Using First-Come First-Serve")
+        scheduling_log, processes = fcfs_scheduling(processes, run_for)
+        log.extend(scheduling_log)  # Append the scheduling log
+
     elif algorithm == "rr":
         if quantum is None:
             print("Error: Quantum not specified for Round Robin algorithm.")
             sys.exit(1)
-        print(f"Using Round Robin with quantum {quantum}")
-        log, processes = round_robin_scheduling(processes, run_for, quantum)
+        log.append(f"Using Round Robin with quantum {quantum}")
+        scheduling_log, processes = round_robin_scheduling(processes, run_for, quantum)
+        log.extend(scheduling_log)  # Append the scheduling log
 
-    # Means algorithm not found
-    if log == None:
+    # Check if the algorithm is valid
+    if not scheduling_log:  # If no log was generated
         print(f"Error: Algorithm not specified/valid.")
     else:
         generate_output(log, processes, input_file)
