@@ -1,6 +1,6 @@
 # Justin Wu
 # Gavin Mortensen
-
+# Ashlyn Zimmer
 
 import sys  # For command-line arguments
 import os  # To handle file name manipulations
@@ -170,68 +170,63 @@ def sjf_preemptive_scheduling(processes, run_for):
     return log, processes
 
 def round_robin_scheduling(processes, run_for, quantum):
-    # Sort the processes by their arrival time before starting the simulation
+    # Sort the processes by arrival time before starting the simulation
     processes.sort(key=lambda x: x.arrival_time)
 
     time = 0
     ready_queue = []
     log = []
-    index = 0
-    
-    # Track the last selected process to prevent redundant logging
-    current_process = None
+    index = 0  # Track the next process to arrive
 
-    while index < len(processes) or ready_queue or current_process:
-        # Add arrived processes to ready_queue
+    while time < run_for:
+        # Check for new arrivals and add them to the ready queue
         while index < len(processes) and processes[index].arrival_time <= time:
             log.append(f"Time {time:>3} : {processes[index].process_id} arrived")
             ready_queue.append(processes[index])
             index += 1
         
-        # If a process is running, add it back to the ready queue if it has remaining burst time
-        if current_process and current_process.remaining_time > 0:
-            ready_queue.append(current_process)
-        
         if ready_queue:
-            current_process = ready_queue.pop(0)
-            
-            if current_process.start_time is None:
+            current_process = ready_queue.pop(0)  # Get the next process in the queue
+            if current_process.start_time is None:  # Set response time if not set
                 current_process.start_time = time
-                log.append(f"Time {time:>3} : {current_process.process_id} selected (burst {current_process.remaining_time:>3})")
             
-            # Execute the process for one quantum or the remaining burst time, whichever is smaller
+            # Log the process selection
+            log.append(f"Time {time:>3} : {current_process.process_id} selected (burst {current_process.remaining_time:>3})")
+            
+            # Determine how long to execute this process
             execute_time = min(quantum, current_process.remaining_time)
             
-            # Simulate the process execution for the time slice
-            for t in range(execute_time):
-                time += 1
-                current_process.remaining_time -= 1
-                
-                # Log any new arrivals during the execution of this process
-                while index < len(processes) and processes[index].arrival_time == time:
-                    log.append(f"Time {time:>3} : {processes[index].process_id} arrived")
-                    ready_queue.append(processes[index])
-                    index += 1
-                
-                if current_process.remaining_time == 0:
-                    current_process.completion_time = time
-                    current_process.turnaround_time = time - current_process.arrival_time
-                    current_process.waiting_time = current_process.turnaround_time - current_process.burst_time
-                    log.append(f"Time {time:>3} : {current_process.process_id} finished")
-                    current_process = None
-                    break
+            for _ in range(execute_time):
+                if time < run_for:  # Only execute if within the run_for time
+                    time += 1
+                    current_process.remaining_time -= 1
+                    
+                    # Log any new arrivals during the execution of this process
+                    while index < len(processes) and processes[index].arrival_time <= time:
+                        log.append(f"Time {time:>3} : {processes[index].process_id} arrived")
+                        ready_queue.append(processes[index])
+                        index += 1
+                    
+                    # Check if the process has finished
+                    if current_process.remaining_time == 0:
+                        current_process.completion_time = time
+                        current_process.turnaround_time = time - current_process.arrival_time
+                        current_process.waiting_time = current_process.turnaround_time - current_process.burst_time
+                        log.append(f"Time {time:>3} : {current_process.process_id} finished")
+                        break
             else:
-                log.append(f"Time {time:>3} : {current_process.process_id} selected (burst {current_process.remaining_time:>3})")
-        
+                # If the process didn't finish, add it back to the queue
+                ready_queue.append(current_process)
         else:
+            # If no process is ready to run, the CPU is idle
             log.append(f"Time {time:>3} : Idle")
-            time += 1  # CPU is idle, increment time
+            time += 1  # Increment time
 
-    log.append(f"Finished at time {time}")
+    log.append(f"Finished at time {time:>3}")
 
-    # Allows all process to be seen as finished (Temp)
+    # Mark all processes as finished in case they have completed
     for process in processes:
-        process.finished = True  # Mark process as finished
+        process.finished = process.remaining_time == 0  # Set finished status
 
     return log, processes
 
@@ -245,6 +240,9 @@ def generate_output(log, processes, input_file):
             f.write(line + '\n')
 
         f.write('\n')  # Empty line before summary
+
+        # Sort processes by process_id before writing to the output
+        processes.sort(key=lambda x: x.process_id)
 
         # Write process metrics
         for process in processes:
@@ -287,7 +285,7 @@ if __name__ == "__main__":
             print("Error: Quantum not specified for Round Robin algorithm.")
             sys.exit(1)
         log.append(f"Using Round-Robin")
-        log.append(f"Quantum {quantum}\n")
+        log.append(f"Quantum {quantum:>3}\n")
         scheduling_log, processes = round_robin_scheduling(processes, run_for, quantum)
         log.extend(scheduling_log)  # Append the scheduling log
 
