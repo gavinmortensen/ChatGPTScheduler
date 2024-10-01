@@ -23,29 +23,124 @@ def parse_input_file(file_path):
     processes = []
     quantum = None  # Initialize quantum to None
 
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-        process_count = int(lines[0].split()[1])
-        run_for = int(lines[1].split()[1])
-        algorithm = lines[2].split()[1]
-        
-        # If the algorithm is round robin, we expect a quantum value
-        if algorithm == "rr":
-            quantum = int(lines[3].split()[1])
-            for i in range(4, 4 + process_count):  # Adjusting to start after the quantum line
-                parts = lines[i].split()
-                process_id = parts[2]
-                arrival_time = int(parts[4])
-                burst_time = int(parts[6])
-                processes.append(Process(process_id, arrival_time, burst_time))
+    # Human-touched Code
+    try:
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+            
+            # Check for sufficient lines in the input file
+            if len(lines) < 3:
+                print("Error: Missing parameters in the input file.")
+                sys.exit(1)
 
-        else:
-            for i in range(3, 3 + process_count):  # No adjustments for the quantum line
-                parts = lines[i].split()
-                process_id = parts[2]
-                arrival_time = int(parts[4])
-                burst_time = int(parts[6])
-                processes.append(Process(process_id, arrival_time, burst_time))
+            try:
+                process_count = int(lines[0].split()[1])
+            except (IndexError, ValueError):
+                print("Error: Missing parameter processcount")
+                sys.exit(1)
+            
+            try:
+                run_for = int(lines[1].split()[1])
+            except (IndexError, ValueError):
+                print("Error: Missing parameter runfor")
+                sys.exit(1)
+            
+            try:
+                algorithm = lines[2].split()[1]
+            except (IndexError, ValueError):
+                print("Error: Missing parameter algorithm")
+                sys.exit(1)
+
+            # Validate parameters
+            if process_count <= 0:
+                print("Error: Invalid parameter processcount.")
+                sys.exit(1)
+            if run_for <= 0:
+                print("Error: Invalid parameter runfor.")
+                sys.exit(1)
+            if not algorithm:
+                print("Error: Missing parameter algorithm")
+                sys.exit(1)
+            if ((algorithm != "fcfs") and (algorithm != "sjf") and (algorithm != "rr")):
+                print("Error: Invalid algorithm.")
+                sys.exit(1)
+
+            # If the algorithm is round robin, we expect a quantum value
+            if algorithm == "rr":
+                if len(lines) < 4:
+                    print("Error: Missing quantum parameter when use is 'rr'")
+                    sys.exit(1)
+                try:
+                    quantum = int(lines[3].split()[1])
+                except (IndexError, ValueError):
+                    print("Error: Missing quantum parameter when use is 'rr'")
+                    sys.exit(1)
+
+                if quantum <= 0:
+                    print("Error: Invalid quantum parameter")
+                    sys.exit(1)
+
+                for i in range(4, 4 + process_count):  # Adjusting to start after the quantum line
+                    if i >= len(lines):
+                        print(f"Error: Missing process data for process.")
+                        sys.exit(1)
+                    parts = lines[i].split()
+                    if len(parts) < 7:
+                        if len(parts) < 5:
+                            if len(parts) < 3:
+                                print(f"Error: Missing parameter process name")
+                            else:
+                                print(f"Error: Missing parameter process arrival")
+                        else:
+                            print(f"Error: Missing parameter process burst")
+                        sys.exit(1)
+                    process_id = parts[2]
+                    arrival_time = int(parts[4])
+                    burst_time = int(parts[6])
+
+                    if arrival_time < 0:
+                        print("Error: Invalid parameter process arrival.")
+                        sys.exit(1)
+                    if burst_time <= 0:
+                        print("Error: Invalid parameter process burst.")
+                        sys.exit(1)
+
+                    processes.append(Process(process_id, arrival_time, burst_time))
+
+            else:
+                for i in range(3, 3 + process_count):  # No adjustments for the quantum line
+                    if i >= len(lines):
+                        print(f"Error: Missing process data for process.")
+                        sys.exit(1)
+                    parts = lines[i].split()
+                    if len(parts) < 7:
+                        if len(parts) < 5:
+                            if len(parts) < 3:
+                                print(f"Error: Missing parameter process name")
+                            else:
+                                print(f"Error: Missing parameter process arrival")
+                        else:
+                            print(f"Error: Missing parameter process burst")
+                        sys.exit(1)
+                    process_id = parts[2]
+                    arrival_time = int(parts[4])
+                    burst_time = int(parts[6])
+
+                    if arrival_time < 0:
+                        print("Error: Invalid parameter process arrival.")
+                        sys.exit(1)
+                    if burst_time <= 0:
+                        print("Error: Invalid parameter process burst.")
+                        sys.exit(1)
+
+                    processes.append(Process(process_id, arrival_time, burst_time))
+
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: An unexpected error occurred: {e}")
+        sys.exit(1)
 
     return processes, run_for, algorithm, quantum
 
@@ -291,6 +386,7 @@ if __name__ == "__main__":
 
     # Check if the algorithm is valid
     if not scheduling_log:  # If no log was generated
-        print(f"Error: Algorithm not specified/valid.")
+        print("Error: Invalid algorithm.")
+        sys.exit(1)
     else:
         generate_output(log, processes, input_file)
